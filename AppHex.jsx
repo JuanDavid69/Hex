@@ -56,9 +56,9 @@ const App = observer(class App extends Component {
                 style={{
                     fontFamily: 'sans-serif',
                     textAlign: 'center',
-                    width: '100vw',
-                    height: '100vh',
-                    overflow: 'visible'
+                    width: '50vw',
+                    height: '50vh',
+                    overflow: 'hidden'
                 }}>
                 <Map app={appState.board} />
             </div>

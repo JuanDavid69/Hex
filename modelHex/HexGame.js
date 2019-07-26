@@ -6,6 +6,7 @@ class HexGame extends Problem {
     constructor(args) {
         super(args);
         this.env = args;
+        this.nTurn = 0;
     }
 
     /**
@@ -51,7 +52,29 @@ class HexGame extends Problem {
      */
     update(data, action, agentID) {
         let board = data.world;
-        board[action[0]][action[1]] = agentID;
+        let size = board.length;
+        
+        // As first move, the center is forgiven.
+        let checkRule0 = true;
+        if (this.nTurn == 0) {
+            if (action[0] === Math.floor(size / 2) 
+                && action[1] === Math.floor(size / 2)) {
+                    checkRule0 = false; 
+            }
+        }
+        // Check if this is legal move?
+        if (action[0] >= 0 && action[0] < size 
+            && action[1] >= 0 && action[1] < size
+            && board[action[0]][action[1]] === 0 && checkRule0) {
+                board[action[0]][action[1]] = agentID;
+        } else {
+            // Make a random move for this player if the movement is not valid
+            let available = getEmptyHex(board);
+            let move = available[Math.round(Math.random() * ( available.length -1 ))];
+            action[0] = Math.floor (move / board.length);
+            action[1] = move % board.length;
+            board[action[0]][action[1]] = agentID;
+        }
     }
 
     /**
@@ -103,7 +126,7 @@ function check(currentHex, player, board) {
         let col = neighbor % size;
         // setVisited(neighbor, player, board);
         board[row][col] = -1;
-        let res =  check(neighbor, player, board);
+        let res = check(neighbor, player, board);
         // resetVisited(neighbor, player, board);
         board[row][col] = player;
         if (res == true) {
@@ -182,3 +205,5 @@ function getEmptyHex(board) {
     }
     return result;
 }
+
+

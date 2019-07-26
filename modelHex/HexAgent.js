@@ -1,260 +1,162 @@
 const Agent = require('ai-agents').Agent;
+const AlphaBetaConstructor = require('alphabeta')
 const Graph = require('node-dijkstra');
+const getEmptyHex = require('./getEmptyHex');
+
+var config = {
+    scoreFunction: scoreFunction,
+    generateMoves: posibleMovements,
+    checkWinConditions: goalTest,
+    depth: 3,
+}
 
 class HexAgent extends Agent {
     constructor(value) {
         super(value);
     }
-    
+
+    /**
+     * return a new move. The move is an array of two integers, representing the
+     * row and column number of the hex to play. If the given movement is not valid,
+     * the Hex controller will perform a random valid movement for the player
+     * Example: [1, 1]
+     */
     send() {
         let board = this.perception;
+        let size = board.length;
         let available = getEmptyHex(board);
-        let move = available[Math.round(Math.random() * ( available.length -1 ))];
-        console.log(shortestPath(redPlayer, board));
-        turn();
-        console.log(shortestPath(redPlayer, board));
-        return [Math.floor (move / board.length), move % board.length];
+        let nTurn = size * size - available.length;
+        config.state = board;
+        let alphabeta = AlphaBetaConstructor( config )
+
+        if (nTurn%0 == 0) { // First move
+            return [Math.floor(size / 2), Math.floor(size / 2) - 1];
+        } 
+            return [Math.floor(size / 2), Math.floor(size / 2)];
     }
-    
 
 }
 
 module.exports = HexAgent;
 
 /**
- * Return an array containing the id of the empty hex in the board
- * id = row * size + col;
- * @param {Matrix} board 
- */
-function getEmptyHex(board) {
-    let result = [];
+     * Check if the given solution solves the problem. You must override
+     * @param {Object} solution 
+     */
+function goalTest(board) {
     let size = board.length;
-    for (let k = 0; k < size; k++) {
+    for (let player of ['1', '2']) {
+        for (let i = 0; i < size; i++) {
+            let hex = -1;
+            if (player === "1") {
+                if (board[i][0] === player) {
+                    hex = i * size;
+                }
+            } else if (player === "2") {
+                if (board[0][i] === player) {
+                    hex = i;
+                }
+            }
+            if (hex >= 0) {
+                let row = Math.floor(hex / size);
+                let col = hex % size;
+                // setVisited(neighbor, player, board);
+                board[row][col] = -1;
+                let status = check(hex, player, board);
+                board[row][col] = player;
+                if (status) {
+                    return true;
+                }
+            }
+        }
+    }
+    return false;
+}
+
+function posibleMovements(board) {
+    let movements = getEmptyHex(board)
+    let nextPosibleMovements = []
+    let size = board.length;
+    let nTurn = size * size - movements.length;
+    let player = 1
+    if (nTurn%2 !== 0) {
+        player = 2
+    }
+
+    for(i=0; i < movements.length; i++) {
+        let newBoard = _copyBoard(board)
+        let movement = movements[i]
+        newBoard[movement/size + movement%size] = player
+        nextPosibleMovements.push(newBoard)
+    }
+
+    return nextPosibleMovements
+}
+
+function boardPath(board, callbackPuntuation) {
+    let player = '1';
+    let size = board.length;
+
+    const route = new Graph();
+
+    // Build the graph out of the hex board
+    for (let i = 0; i < size; i++) {
         for (let j = 0; j < size; j++) {
-            if (board[k][j] === 0) {
-                result.push(k * size + j);
+            let key = i * size + j;
+            let list = getNeighborhood(key, player, board);
+            let neighbors = {};
+            list.forEach(x => {
+                neighbors[x + ''] = 1;
+            });
+            if (j === 0) { //Add edge to T
+                neighbors[player + 'T'] = 1;
+            }
+            if (j === size - 1) { //Add edge to R
+                neighbors[player + 'X'] = 1;
+            }
+            route.addNode(key + '', neighbors);
+        }
+    }
+
+    let neighborsT = {};
+    let neighborsX = {};
+
+    for (let i = 0; i < size; i++) {
+        if (board[i][0] === 0) {
+            neighborsT[(i * size) + ''] = 1;
+        }
+        if (board[i][size - 1] === 0) {
+            neighborsX[(i * size + size - 1) + ''] = 1;
+        }
+    }
+
+    route.addNode(player + 'T', neighborsT);
+    route.addNode(player + 'X', neighborsX);
+
+    return callbackPuntuation(route.path(player + 'T', player + 'X').length);
+}
+
+/**
+ * Transpose and convert the board game to a player 1 logic
+ * @param {Array} board 
+ */
+function transpose(board) {
+    let size = board.length;
+    let boardT = new Array(size);
+    for (let j = 0; j < size; j++) {
+        boardT[j] = new Array(size);
+        for (let i = 0; i < size; i++) {
+            boardT[j][i] = board[i][j];
+            if (boardT[j][i] === '1') {
+                boardT[j][i] = '2';
+            } else if (boardT[j][i] === '2') {
+                boardT[j][i] = '1';
             }
         }
     }
-    return result;
+    return boardT;
 }
 
-var redPlayer = true;
-
-function turn(){
-    if(redPlayer){
-        redPlayer = false;
-    }else{
-        redPlayer = true;
-    }
+function _copyBoard( board ) {
+    return JSON.parse(JSON.stringify(board))
 }
-
-var size = 5;
-var minimeTable = new Array(size);
-var leftEdge = new Array(2);
-var topEdge = new Array(2);
-var rightEdge = new Array(3);
-var bottomEdge = new Array(3);
-
-for (var i  = 0; i < size; i++){
-    minimeTable[i] = new Array(size);
-}
-
-//console.log(minimax(0, true, -Infinity, Infinity));
-//console.log(calculateHeuristic());
-
-function initMinimeTable(red,board){
-    rightEdge[0] = Infinity;
-    bottomEdge[0] = Infinity;
-    for (var i  = 0; i < board.length; i++){
-        for (var j = 0; j < board.length; j++){
-            minimeTable[i][j] = Infinity;
-            if (red){
-                let value = isAvaible(board[i][j], red);
-                if ((j == 0) && (value)){
-                    minimeTable[i][j] = obtainValue(board[i][j], red);
-                }
-            }
-            else{
-                let value = isAvaible(board[i][j], red);
-                if ((i == 0) && (value)){
-                    minimeTable[i][j] = obtainValue(board[i][j], red);
-                }
-            }
-        }
-    }
-}
-
-function isAvaible(item, red){
-    if(red){
-        if ((item == 0) || (item == "1")){
-            return true;
-        }
-        else return false;
-    }
-    else {
-        if ((item == 0) || (item == "2")){
-            return true;
-        }
-        else return false;
-    } 
-}
-
-function obtainValue(item, red){
-    if (item == 0){
-        return 1;
-    }
-    if ((item == "1") && (red)){
-        return 0;
-    }
-    if ((item == "2") && !(red)){
-        return 0;
-    }
-}
-
-function shortestPath(red, board){
-    initMinimeTable(red, board);
-    for (var i = 0; i < board.length - 1; i++){
-        for (var j = 0; j < board.length - 1; j++){
-
-            let crrentVal = minimeTable[i][j];
-
-            //Izquierda
-
-            if((j - 1 >= 0) && isAvaible(board[i][j-1], red)){
-                let num = crrentVal + obtainValue(board[i][j-1], red);
-                if (num < minimeTable[i][j-1]){
-                    minimeTable[i][j-1] = num;
-                }
-            }
-
-            //Arriba-izquierda
-            if((i - 1 >= 0) && (j - 1 >= 0) && isAvaible(board[i-1][j-1], red)){
-                let num = crrentVal + obtainValue(board[i-1][j-1], red);
-                if (num < minimeTable[i-1][j-1]){
-                    minimeTable[i-1][j-1] = num;
-                }
-            }
-
-            //Arriba
-            if((i - 1 >= 0) && isAvaible(board[i-1][j], red)){
-                let num = crrentVal + obtainValue(board[i-1][j], red);
-                if (num < minimeTable[i-1][j]){
-                    minimeTable[i-1][j][0] = num;
-                }
-            }
-
-            //Derecha
-            if((j + 1 < board.length) && isAvaible(board[i][j+1], red)){
-                let num = crrentVal + obtainValue(board[i][j+1], red);
-                if (num < minimeTable[i][j+1]){
-                    minimeTable[i][j+1] = num;
-
-                    if (red && (j == board.length - 2)){
-                        if (num < rightEdge[0]){
-                            rightEdge[0] = num;
-                            rightEdge[1] = i;
-                            rightEdge[2] = j + 1;
-                        }
-                    }
-                }
-            }
-
-            //Abajo derecha
-            if((i + 1 < board.length) && (j + 1 < board.length) && isAvaible(board[i+1][j+1], red)){
-                let num = crrentVal + obtainValue(board[i+1][j+1], red);
-                if (num < minimeTable[i+1][j+1]){
-                    minimeTable[i+1][j+1] = num;
-
-                    if (red && (j == board.length -2)){
-                        if (num < rightEdge[0]){
-                            rightEdge[0] = num;
-                            rightEdge[1] = i + 1;
-                            rightEdge[2] = j + 1;
-                        }
-                    }
-                    else if (!red && (i == board.length -2)){
-                        if (num < bottomEdge[0]){
-                            bottomEdge[0] = num;
-                            bottomEdge[1] = i + 1;
-                            bottomEdge[2] = j + 1;
-                        }
-                    }
-                }
-            }
-
-            //Abajo
-            if((i + 1 < board.length) && isAvaible(board[i+1][j], red)){
-                let num = crrentVal + obtainValue(board[i+1][j], red);
-                if (num < minimeTable[i+1][j]){
-                    minimeTable[i+1][j] = num;
-
-                    if (!red && (i == board.length -2)){
-                        if (num < bottomEdge[0]){
-                            bottomEdge[0] = num;
-                            bottomEdge[1] = i + 1;
-                            bottomEdge[2] = j;
-                        }
-                    }
-                }
-            }
-        }
-        
-    }
-    
-
-    if (red){
-        console.log(minimeTable);
-        console.log("red");
-        return rightEdge[0];
-    }
-    else {
-        console.log(minimeTable);
-        console.log("black");
-        return bottomEdge[0];
-    }
-}
-/*
-function calculateHeuristic(){
-    let blueShorPath = shortestPath(true);
-    let redShorPath = shortestPath(false);
-
-    return redShorPath - blueShorPath
-}
-
-function minimax(depth, isMaximizing, alpha, beta){ //Aún no funciona
-    if (depth == 3){
-        return calculateHeuristic();
-    }
-
-    if (isMaximizing){
-        let bestVal = -Infinity;
-        for (var i = 0; i < size - 1; i++){
-            for (var j = 0; j < size - 1; j++){
-                let value = minimax(depth++, false, alpha, beta);
-                bestVal = Math.max(bestVal, value);
-                alpha = max(alpha, bestVal);
-                if (beta <= alpha){
-                    break;
-                }
-            }
-        }
-        return bestVal;
-    }
-
-    else {
-        bestVal = Infinity;
-        
-        for (var i = 0; i < size - 1; i++){
-            for (var j = 0; j < size - 1; j++){
-                let value = minimax(depth++, true, alpha, beta);
-                bestVal = Math.min(bestVal, value);
-                alpha = max(alpha, bestVal);
-                if (beta <= alpha){
-                    break;
-                }
-            }
-        }
-        return bestVal;
-    }
-}*/

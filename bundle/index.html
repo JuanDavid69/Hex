@@ -1,5 +1,6 @@
+
 <div id="errors" style="
-  background: #f01;
+  background: #c00;
   color: #fff;
   display: none;
   margin: -20px -20px 20px;
@@ -23,7 +24,7 @@ window.addEventListener('click', function(e) {
     e.preventDefault();
   }
 });
-/*window.onerror = function(message, source, line, col, error) {
+window.onerror = function(message, source, line, col, error) {
   var text = error ? error.stack || error : message + ' (at ' + source + ':' + line + ':' + col + ')';
   errors.textContent += text + '\n';
   errors.style.display = '';
@@ -34,6 +35,6 @@ console.error = (function(old) {
     errors.style.display = '';
     old.apply(this, arguments);
   }
-})(console.error);*/
+})(console.error);
 </script>
 <script type="text/javascript" src="index_bundle.js"></script>
