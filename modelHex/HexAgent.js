@@ -10,15 +10,12 @@ class HexAgent extends Agent {
         let board = this.perception;
         let available = getEmptyHex(board);
         let move = available[Math.round(Math.random() * ( available.length -1 ))];
-        /*initMinimeTable(true,board);
-        console.log(minimeTable);
-        for (var i  = 0; i < size; i++){
-            for (var j = 0; j < size; j++){
-                console.log((minimeTable[i][j][0]));
-            }
-        }*/
+        console.log(shortestPath(redPlayer, board));
+        turn();
+        console.log(shortestPath(redPlayer, board));
         return [Math.floor (move / board.length), move % board.length];
     }
+    
 
 }
 
@@ -42,8 +39,17 @@ function getEmptyHex(board) {
     return result;
 }
 
+var redPlayer = true;
+
+function turn(){
+    if(redPlayer){
+        redPlayer = false;
+    }else{
+        redPlayer = true;
+    }
+}
+
 var size = 5;
-//var board = new Array(size);
 var minimeTable = new Array(size);
 var leftEdge = new Array(2);
 var topEdge = new Array(2);
@@ -51,63 +57,28 @@ var rightEdge = new Array(3);
 var bottomEdge = new Array(3);
 
 for (var i  = 0; i < size; i++){
-    //board[i] = new Array(size);
     minimeTable[i] = new Array(size);
 }
 
-for (var i  = 0; i < size; i++){
-    for (var j = 0; j < size; j++){
-        //board[i][j] = 0;
-        minimeTable[i][j] = new Array(3);
-    }
-}
-
-//Pruebas:
-/*
-board[4][0] = 0;
-board[3][1] = 0;
-board[2][2] = 0;
-board[0][2] = 0;
-board[1][3] = 0;
-board[2][4] = 0;
-board[3][4] = 0;
-board[0][3] = 0;
-board[4][1] = 0;
-board[3][2] = 0;
-board[0][0] = 0;
-board[0][1] = 0;
-board[0][2] = 0;
-board[0][3] = 0;
-board[2][4] = 0;
-
- 
-
-for (var i  = 0; i < size; i++){
-    for (var j = 0; j < size; j++){
-        console.log((minimeTable[i][j][0]));
-    }
-}*/
-
 //console.log(minimax(0, true, -Infinity, Infinity));
-console.log(calculateHeuristic());
-
+//console.log(calculateHeuristic());
 
 function initMinimeTable(red,board){
     rightEdge[0] = Infinity;
     bottomEdge[0] = Infinity;
-    for (var i  = 0; i < size; i++){
-        for (var j = 0; j < size; j++){
-            minimeTable[i][j][0] = Infinity;
+    for (var i  = 0; i < board.length; i++){
+        for (var j = 0; j < board.length; j++){
+            minimeTable[i][j] = Infinity;
             if (red){
                 let value = isAvaible(board[i][j], red);
                 if ((j == 0) && (value)){
-                    minimeTable[i][j][0] = obtainValue(board[i][j], red);
+                    minimeTable[i][j] = obtainValue(board[i][j], red);
                 }
             }
             else{
                 let value = isAvaible(board[i][j], red);
                 if ((i == 0) && (value)){
-                    minimeTable[i][j][0] = obtainValue(board[i][j], red);
+                    minimeTable[i][j] = obtainValue(board[i][j], red);
                 }
             }
         }
@@ -136,57 +107,50 @@ function obtainValue(item, red){
     if ((item == "1") && (red)){
         return 0;
     }
-    if ((item == "2") && (!red)){
+    if ((item == "2") && !(red)){
         return 0;
     }
 }
 
-function shortestPath(red,board){
-    initMinimeTable(red);
-    for (var i = 0; i < size - 1; i++){
-        for (var j = 0; j < size - 1; j++){
+function shortestPath(red, board){
+    initMinimeTable(red, board);
+    for (var i = 0; i < board.length - 1; i++){
+        for (var j = 0; j < board.length - 1; j++){
 
-            let crrentVal = minimeTable[i][j][0];
+            let crrentVal = minimeTable[i][j];
 
             //Izquierda
+
             if((j - 1 >= 0) && isAvaible(board[i][j-1], red)){
                 let num = crrentVal + obtainValue(board[i][j-1], red);
-                if (num < minimeTable[i][j-1][0]){
-                    minimeTable[i][j-1][0] = num;
-                    minimeTable[i][j-1][1] = i;
-                    minimeTable[i][j-1][2] = j;
+                if (num < minimeTable[i][j-1]){
+                    minimeTable[i][j-1] = num;
                 }
             }
 
             //Arriba-izquierda
             if((i - 1 >= 0) && (j - 1 >= 0) && isAvaible(board[i-1][j-1], red)){
                 let num = crrentVal + obtainValue(board[i-1][j-1], red);
-                if (num < minimeTable[i-1][j-1][0]){
-                    minimeTable[i-1][j-1][0] = num;
-                    minimeTable[i-1][j-1][1] = i;
-                    minimeTable[i-1][j-1][2] = j;
+                if (num < minimeTable[i-1][j-1]){
+                    minimeTable[i-1][j-1] = num;
                 }
             }
 
             //Arriba
             if((i - 1 >= 0) && isAvaible(board[i-1][j], red)){
                 let num = crrentVal + obtainValue(board[i-1][j], red);
-                if (num < minimeTable[i-1][j][0]){
+                if (num < minimeTable[i-1][j]){
                     minimeTable[i-1][j][0] = num;
-                    minimeTable[i-1][j][1] = i;
-                    minimeTable[i-1][j][2] = j;
                 }
             }
 
             //Derecha
-            if((j + 1 < size) && isAvaible(board[i][j+1], red)){
+            if((j + 1 < board.length) && isAvaible(board[i][j+1], red)){
                 let num = crrentVal + obtainValue(board[i][j+1], red);
-                if (num < minimeTable[i][j+1][0]){
-                    minimeTable[i][j+1][0] = num;
-                    minimeTable[i][j+1][1] = i;
-                    minimeTable[i][j+1][2] = j;
+                if (num < minimeTable[i][j+1]){
+                    minimeTable[i][j+1] = num;
 
-                    if (red && (j == size -2)){
+                    if (red && (j == board.length - 2)){
                         if (num < rightEdge[0]){
                             rightEdge[0] = num;
                             rightEdge[1] = i;
@@ -197,21 +161,19 @@ function shortestPath(red,board){
             }
 
             //Abajo derecha
-            if((i + 1 < size) && (j + 1 < size) && isAvaible(board[i+1][j+1], red)){
+            if((i + 1 < board.length) && (j + 1 < board.length) && isAvaible(board[i+1][j+1], red)){
                 let num = crrentVal + obtainValue(board[i+1][j+1], red);
-                if (num < minimeTable[i+1][j+1][0]){
-                    minimeTable[i+1][j+1][0] = num;
-                    minimeTable[i+1][j+1][1] = i;
-                    minimeTable[i+1][j+1][2] = j;
+                if (num < minimeTable[i+1][j+1]){
+                    minimeTable[i+1][j+1] = num;
 
-                    if (red && (j == size -2)){
+                    if (red && (j == board.length -2)){
                         if (num < rightEdge[0]){
                             rightEdge[0] = num;
                             rightEdge[1] = i + 1;
                             rightEdge[2] = j + 1;
                         }
                     }
-                    else if (!red && (i == size -2)){
+                    else if (!red && (i == board.length -2)){
                         if (num < bottomEdge[0]){
                             bottomEdge[0] = num;
                             bottomEdge[1] = i + 1;
@@ -222,14 +184,12 @@ function shortestPath(red,board){
             }
 
             //Abajo
-            if((i + 1 < size) && isAvaible(board[i+1][j], red)){
+            if((i + 1 < board.length) && isAvaible(board[i+1][j], red)){
                 let num = crrentVal + obtainValue(board[i+1][j], red);
-                if (num < minimeTable[i+1][j][0]){
-                    minimeTable[i+1][j][0] = num;
-                    minimeTable[i+1][j][1] = i;
-                    minimeTable[i+1][j][2] = j;
+                if (num < minimeTable[i+1][j]){
+                    minimeTable[i+1][j] = num;
 
-                    if (!red && (i == size -2)){
+                    if (!red && (i == board.length -2)){
                         if (num < bottomEdge[0]){
                             bottomEdge[0] = num;
                             bottomEdge[1] = i + 1;
@@ -239,16 +199,22 @@ function shortestPath(red,board){
                 }
             }
         }
+        
     }
+    
 
     if (red){
+        console.log(minimeTable);
+        console.log("red");
         return rightEdge[0];
     }
     else {
+        console.log(minimeTable);
+        console.log("black");
         return bottomEdge[0];
     }
 }
-
+/*
 function calculateHeuristic(){
     let blueShorPath = shortestPath(true);
     let redShorPath = shortestPath(false);
@@ -291,4 +257,4 @@ function minimax(depth, isMaximizing, alpha, beta){ //Aún no funciona
         }
         return bestVal;
     }
-}
+}*/
