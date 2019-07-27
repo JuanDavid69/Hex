@@ -3,11 +3,7 @@ var AlphaBetaConstructor = require('alphabeta')
 const Graph = require('node-dijkstra');
 const getEmptyHex = require('./getEmptyHex');
 
-var config = {
-    scoreFunction: boardPath,
-    generateMoves: posibleMovements,
-    checkWinConditions: goalTest,
-}
+const depth = 3
 
 class HexAgent extends Agent {
     constructor(value) {
@@ -23,20 +19,16 @@ class HexAgent extends Agent {
     send() {
         let board = this.perception;
         let size = board.length;
-        let available = getEmptyHex(board);
-        let nTurn = size * size - available.length;
-        config.state = board;
-        let alphabeta = AlphaBetaConstructor(config)
-        alphabeta.incrementDepthForMilliseconds(500, function (beststate) {
-            console.log(beststate.alphabeta.best())
-            return
-        })
+        /*if (size * size - posibleMovements(board).length === 0) {
+            return [Math.floor(size / 2), Math.floor(size / 2)];
+        } else if (size * size - posibleMovements(board).length === 1) {
+            return [Math.floor(size / 2), Math.floor(size / 2)];
+        }*/
+        let bestOption = minimax(board, depth)
+        let move = boardToMove(board, bestOption.board)
 
-        if (nTurn % 0 == 0) { // First move
 
-            return [Math.floor(size / 2), Math.floor(size / 2) - 1];
-        }
-        return [Math.floor(size / 2), Math.floor(size / 2)];
+        return [Math.floor(move / size), move % size];
     }
 
 }
@@ -97,7 +89,20 @@ function posibleMovements(board) {
     return nextPosibleMovements
 }
 
-function boardPath(board, callbackPuntuation) {
+function boardToMove(oldBoard, newBoard) {
+    let size = newBoard.length
+    for (let i = 0; i < size; i++) {
+        for (let j = 0; j < size; j++) {
+            if (oldBoard[i][j] !== newBoard[i][j]) {
+                return (i * size) + j
+            }
+        }
+    }
+
+    return 0
+}
+
+function heuristic(board) {
     let player = "1";
     let size = board.length;
     let movements = getEmptyHex(board)
@@ -107,6 +112,7 @@ function boardPath(board, callbackPuntuation) {
         player = "2"
         boardC = transpose(boardC)
     }
+    console.log(boardC)
 
     const route = new Graph();
 
@@ -143,8 +149,11 @@ function boardPath(board, callbackPuntuation) {
 
     route.addNode(player + 'T', neighborsT);
     route.addNode(player + 'X', neighborsX);
+    console.log("neighbors")
+    console.log(neighborsT)
+    console.log(neighborsX)
 
-    return callbackPuntuation(route.path(player + 'T', player + 'X').length);
+    return route.path(player + 'T', player + 'X').length;
 }
 
 /**
@@ -253,4 +262,46 @@ function isEndHex(currentHex, player, size) {
             return true;
         }
     }
+}
+
+function minimax(board, maxDepth, depth = 0) {
+    if (goalTest(board)){
+        if (depth -1 % 2){
+            return {
+                board: board,
+                heuristic: Number.MIN_SAFE_INTEGER,
+            }
+        }
+
+        return {
+            board: board,
+            heuristic: Number.MAX_SAFE_INTEGER,
+        }
+    }
+    if (depth === maxDepth ) {
+        return {
+            board: board,
+            heuristic: heuristic(board),
+        };
+    }
+    let movements = posibleMovements(board);
+    let weights = [];
+
+    for (let i = 0; i < movements.length; i++) {
+        let weight = minimax(movements[i], maxDepth, depth++).heuristic;
+        weights.push(weight);
+    }
+    if (depth % 2 === 0) {
+        let maxWeight = Math.max(weights);
+        return {
+            board: movements[weights.indexOf(maxWeight)],
+            heuristic: maxWeight,
+        };
+    }
+
+    let minWeight = Math.min(weights);
+    return {
+        board: movements[weights.indexOf(minWeight)],
+        heuristic: minWeight,
+    };
 }
