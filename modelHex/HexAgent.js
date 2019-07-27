@@ -7,7 +7,6 @@ var config = {
     scoreFunction: boardPath,
     generateMoves: posibleMovements,
     checkWinConditions: goalTest,
-    depth: 3,
 }
 
 class HexAgent extends Agent {
@@ -28,12 +27,13 @@ class HexAgent extends Agent {
         let nTurn = size * size - available.length;
         config.state = board;
         let alphabeta = AlphaBetaConstructor(config)
-        alphabeta.allSteps(function (beststate) {
-            console.log(beststate)
+        alphabeta.incrementDepthForMilliseconds(500, function (beststate) {
+            console.log(beststate.alphabeta.best())
             return
         })
 
         if (nTurn % 0 == 0) { // First move
+
             return [Math.floor(size / 2), Math.floor(size / 2) - 1];
         }
         return [Math.floor(size / 2), Math.floor(size / 2)];
@@ -90,7 +90,7 @@ function posibleMovements(board) {
     for (let i = 0; i < movements.length; i++) {
         let newBoard = _copyBoard(board)
         let movement = movements[i]
-        newBoard[Math.floor(movement / size)][Math.floor(movement % size)] = player
+        newBoard[Math.floor(movement / size)][movement % size] = player
         nextPosibleMovements.push(newBoard)
     }
 
@@ -98,12 +98,13 @@ function posibleMovements(board) {
 }
 
 function boardPath(board, callbackPuntuation) {
-    let player = '1';
+    let player = "1";
     let size = board.length;
     let movements = getEmptyHex(board)
     let nTurn = size * size - movements.length;
     let boardC = _copyBoard(board)
     if (nTurn % 0 !== 0) {
+        player = "2"
         boardC = transpose(boardC)
     }
 
